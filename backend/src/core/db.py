@@ -1,7 +1,8 @@
-"""Lazy asyncpg pool. Created on first DB use so boot/health work without a DB."""
+"""Lazy asyncpg pool. Created on first DB use so boot/health need no DB traffic."""
 
-import os
 import asyncpg
+
+from .config import settings
 
 _pool: asyncpg.Pool | None = None
 
@@ -9,10 +10,7 @@ _pool: asyncpg.Pool | None = None
 async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
-        url = os.getenv("DATABASE_URL")
-        if not url:
-            raise RuntimeError("DATABASE_URL is not set")
-        _pool = await asyncpg.create_pool(url)
+        _pool = await asyncpg.create_pool(settings.database_url)
     return _pool
 
 

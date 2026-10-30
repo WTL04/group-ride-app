@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+
 from .core.db import close_pool
 from .routes import live, rides
 

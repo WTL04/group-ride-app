@@ -1,15 +1,25 @@
-from contextlib import asynccontextmanager
 import asyncpg
 from fastapi import APIRouter, HTTPException
+
 from ..core.db import get_pool
 from ..models.schemas import Ride, RideCreate
 
 router = APIRouter()
 
-_COLUMNS = (
-    "ride_id, title, start_location, end_location, "
-    "distance_km, difficulty, avg_pace, max_riders"
+_RIDE_COLUMNS: tuple[str, ...] = (
+    "ride_id",
+    "title",
+    "start_location",
+    "end_location",
+    "distance_km",
+    "difficulty",
+    "avg_pace",
+    "max_riders",
 )
+_COLUMNS = ", ".join(_RIDE_COLUMNS)
+_INSERT_TUPLE = tuple(c for c in _RIDE_COLUMNS if c != "ride_id")
+_INSERT_COLUMNS = ", ".join(_INSERT_TUPLE)
+_PLACEHOLDERS = ", ".join(f"${i + 1}" for i in range(len(_INSERT_TUPLE)))
 
 
 @router.get("/", response_model=list[Ride])
@@ -24,12 +34,9 @@ async def create_ride(body: RideCreate) -> Ride:
     pool = await get_pool()
     try:
         row = await pool.fetchrow(
-            """INSERT INTO ride
-                   (title, start_location, end_location, distance_km,
-                    difficulty, avg_pace, max_riders)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
-               RETURNING ride_id, title, start_location, end_location,
-                         distance_km, difficulty, avg_pace, max_riders""",
+            f"""INSERT INTO ride ({_INSERT_COLUMNS})
+                VALUES ({_PLACEHOLDERS})
+                RETURNING {_COLUMNS}""",
             body.title,
             body.start_location,
             body.end_location,
@@ -42,7 +49,8 @@ async def create_ride(body: RideCreate) -> Ride:
         raise HTTPException(
             status_code=400, detail="ride violates a constraint"
         ) from exc
-    assert row is not None
+    if row is None:
+        raise HTTPException(status_code=500, detail="ride creation failed")
     return Ride(**dict(row))
 
 

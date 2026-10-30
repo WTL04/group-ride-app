@@ -1,18 +1,21 @@
 # Web
-fastapi
-uvicorn[standard]
+fastapi>=0.162
+uvicorn[standard]>=0.54
 
 # Postgres (async driver, matches schema.sql)
-asyncpg
+asyncpg>=0.32
 
 # Realtime fan-out for live positions
-redis
+redis>=8.1
 
 # Env / config
-python-dotenv
+python-dotenv>=1.2
 
 # Tests
-pytest
-httpx
-pytest-asyncio
-anyio
+pytest>=9.2
+httpx>=0.28
+pytest-asyncio>=1.4
+anyio>=4.15
+
+# Lint
+ruff>=0.17

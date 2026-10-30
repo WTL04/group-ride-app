@@ -9,3 +9,10 @@ jest.mock('@react-navigation/native', () => {
     NavigationContainer: ({ children }) => children,
   };
 });
+
+jest.mock('@react-native-community/datetimepicker', () => {
+  const React = require('react');
+  return function MockDateTimePicker(props) {
+    return React.createElement('View', { testID: props.testID });
+  };
+});

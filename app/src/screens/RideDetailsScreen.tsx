@@ -3,14 +3,16 @@ import { StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { AppButton } from '../components/AppButton';
-import { mockRides } from '../data/mockRides';
+import { formatRideDateTime } from '../lib/formatRideDate';
+import { useRides } from '../store/RidesContext';
 import { RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RideDetails'>;
 
 export function RideDetailsScreen({ route }: Props) {
-  const ride = mockRides.find(r => r.id === route.params.rideId);
+  const { rides } = useRides();
+  const ride = rides.find(r => r.id === route.params.rideId);
 
   if (!ride) {
     return (
@@ -24,14 +26,25 @@ export function RideDetailsScreen({ route }: Props) {
     <ScreenContainer>
       <Text style={styles.title}>{ride.title}</Text>
       <Text style={styles.meta}>
-        {ride.date} • {ride.distanceKm} km
+        {formatRideDateTime(ride.startDateTime)} • {ride.distance} {ride.distanceUnit} • {ride.difficulty}
       </Text>
-      <Text style={styles.meta}>Start: {ride.startLocation}</Text>
       <Text style={styles.meta}>
-        Riders: {ride.riders.length}/{ride.maxRiders} • {ride.difficulty}
+        Route: {ride.startLocation} → {ride.endLocation}
       </Text>
-      <View style={styles.spacer} />
-      <Text style={styles.body}>{ride.description}</Text>
+      <Text style={styles.meta}>
+        Riders: {ride.riders.length}/{ride.maxRiders}
+      </Text>
+      {ride.avgPace !== null ? (
+        <Text style={styles.meta}>
+          Avg pace: {ride.avgPace} min/{ride.distanceUnit}
+        </Text>
+      ) : null}
+      {ride.description ? (
+        <>
+          <View style={styles.spacer} />
+          <Text style={styles.body}>{ride.description}</Text>
+        </>
+      ) : null}
       <View style={styles.spacer} />
       <AppButton title="Join ride" onPress={() => {}} />
     </ScreenContainer>

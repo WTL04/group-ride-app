@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { formatRideDateTime } from '../lib/formatRideDate';
 import { Ride } from '../types';
 import { colors, spacing } from '../theme';
 
@@ -13,15 +14,25 @@ export function RideCard({ ride, onPress }: Props) {
     <Pressable style={styles.card} onPress={onPress}>
       <Text style={styles.title}>{ride.title}</Text>
       <Text style={styles.meta}>
-        {ride.date} • {ride.distanceKm} km • {ride.difficulty}
+        {formatRideDateTime(ride.startDateTime)} • {ride.distance} {ride.distanceUnit} • {ride.difficulty}
       </Text>
       <Text style={styles.meta}>
-        {ride.startLocation} • {ride.riders.length}/{ride.maxRiders} riders
+        {ride.startLocation} → {ride.endLocation} • {ride.riders.length}/
+        {ride.maxRiders} riders
       </Text>
-      <View style={styles.spacer} />
-      <Text numberOfLines={2} style={styles.desc}>
-        {ride.description}
-      </Text>
+      {ride.avgPace !== null ? (
+        <Text style={styles.meta}>
+          Avg pace {ride.avgPace} min/{ride.distanceUnit}
+        </Text>
+      ) : null}
+      {ride.description ? (
+        <>
+          <View style={styles.spacer} />
+          <Text numberOfLines={2} style={styles.desc}>
+            {ride.description}
+          </Text>
+        </>
+      ) : null}
     </Pressable>
   );
 }

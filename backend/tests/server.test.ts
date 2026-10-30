@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildServer } from '../server.js'
+import { buildServer } from '../src/app.js'
 
 describe('GET /', () => {
   it('returns hello world as JSON', async () => {

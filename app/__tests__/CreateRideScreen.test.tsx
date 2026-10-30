@@ -4,11 +4,12 @@
 
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { CreateRideScreen } from '../src/screens/CreateRideScreen';
 import { AppButton } from '../src/components/AppButton';
 import { RidesProvider } from '../src/store/RidesContext';
-import { NewRide } from '../src/types';
+import { Ride } from '../src/types';
 
 const METRICS = {
   insets: { top: 0, left: 0, right: 0, bottom: 0 },
@@ -16,7 +17,7 @@ const METRICS = {
 };
 
 interface SetupOptions {
-  onCreate?: (ride: NewRide) => void;
+  onCreate?: (ride: Ride) => void;
   navigation?: { navigate: jest.Mock };
 }
 
@@ -76,7 +77,10 @@ test('submits a ride draft with parsed values', async () => {
   await submit(root);
 
   expect(onCreate).toHaveBeenCalledTimes(1);
-  const draft: NewRide = onCreate.mock.calls[0][0];
+  const draft: Ride = onCreate.mock.calls[0][0];
+  expect(draft.id).toEqual(expect.any(String));
+  expect(draft.id.length).toBeGreaterThan(0);
+  expect(draft.riders).toEqual([]);
   expect(draft.title).toBe('Saturday Morning Loop');
   expect(draft.startLocation).toBe('Central Park');
   expect(draft.endLocation).toBe('Riverside Cafe');
@@ -106,7 +110,7 @@ test('accepts a blank pace and blank description as skipped', async () => {
   await submit(root);
 
   expect(onCreate).toHaveBeenCalledTimes(1);
-  const draft: NewRide = onCreate.mock.calls[0][0];
+  const draft: Ride = onCreate.mock.calls[0][0];
   expect(draft.avgPace).toBeNull();
   expect(draft.description).toBe('');
 });
@@ -277,7 +281,7 @@ test('stores a valid future startDateTime by default', async () => {
   await submit(root);
 
   expect(onCreate).toHaveBeenCalledTimes(1);
-  const draft: NewRide = onCreate.mock.calls[0][0];
+  const draft: Ride = onCreate.mock.calls[0][0];
   expect(Number.isFinite(Date.parse(draft.startDateTime))).toBe(true);
   expect(new Date(draft.startDateTime).getTime()).toBeGreaterThan(Date.now());
 });
@@ -293,12 +297,15 @@ test('stores the date chosen in the picker', async () => {
     root.findByProps({ testID: 'start-datetime-button' }).props.onPress();
   });
   await ReactTestRenderer.act(() => {
-    root.findByProps({ testID: 'start-datetime-picker' }).props.onChange({ type: 'set' }, chosen);
+    root.findByProps({ testID: 'start-datetime-picker' }).props.onValueChange(
+      { nativeEvent: { timestamp: chosen.getTime(), utcOffset: 0 } },
+      chosen,
+    );
   });
   await submit(root);
 
   expect(onCreate).toHaveBeenCalledTimes(1);
-  const draft: NewRide = onCreate.mock.calls[0][0];
+  const draft: Ride = onCreate.mock.calls[0][0];
   expect(draft.startDateTime).toBe(chosen.toISOString());
 });
 
@@ -313,10 +320,146 @@ test('rejects a start in the past', async () => {
     root.findByProps({ testID: 'start-datetime-button' }).props.onPress();
   });
   await ReactTestRenderer.act(() => {
-    root.findByProps({ testID: 'start-datetime-picker' }).props.onChange({ type: 'set' }, past);
+    root.findByProps({ testID: 'start-datetime-picker' }).props.onValueChange(
+      { nativeEvent: { timestamp: past.getTime(), utcOffset: 0 } },
+      past,
+    );
   });
   await submit(root);
 
   expect(onCreate).not.toHaveBeenCalled();
   expect(errorText(root)).toMatch(/future/);
+});
+
+test('rejects a zero pace with a greater-than-zero message', async () => {
+  const onCreate = jest.fn();
+  const renderer = await renderScreen({ onCreate });
+  const root = renderer.root;
+
+  await fillValidForm(root);
+  await ReactTestRenderer.act(() => {
+    fill(root, 'avg-pace-input', '0');
+  });
+  await submit(root);
+
+  expect(onCreate).not.toHaveBeenCalled();
+  expect(errorText(root)).toMatch(/greater than 0/);
+});
+
+test('does not show a stale success banner when navigating to details', async () => {
+  const navigation = { navigate: jest.fn() };
+  const renderer = await renderScreen({ navigation });
+  const root = renderer.root;
+
+  await fillValidForm(root);
+  await submit(root);
+
+  expect(navigation.navigate).toHaveBeenCalledTimes(1);
+  expect(root.findAllByProps({ testID: 'form-success' })).toHaveLength(0);
+  expect(root.findByProps({ testID: 'title-input' }).props.value).toBe('');
+});
+
+test('exposes units and difficulty as radio groups', async () => {
+  const renderer = await renderScreen({});
+  const root = renderer.root;
+
+  expect(
+    root.findByProps({ testID: 'distance-unit-mi' }).props.accessibilityRole,
+  ).toBe('radio');
+  expect(
+    root.findByProps({ testID: 'difficulty-casual' }).props.accessibilityRole,
+  ).toBe('radio');
+  expect(
+    root.findAllByProps({ accessibilityRole: 'radiogroup' }).map(
+      n => n.props.accessibilityLabel,
+    ),
+  ).toEqual(
+    expect.arrayContaining([
+      'Units for distance and average pace',
+      'Difficulty',
+    ]),
+  );
+});
+
+test('starts button carries a change affordance', async () => {
+  const renderer = await renderScreen({});
+  const root = renderer.root;
+
+  const button = root.findByProps({ testID: 'start-datetime-button' });
+  expect(button.props.accessibilityLabel).toMatch(/Tap to change/);
+  const kids = React.Children.toArray(button.props.children);
+  expect(kids).toHaveLength(2);
+  expect(
+    (kids[1] as React.ReactElement<{ children?: unknown }>).props.children,
+  ).toBe('›');
+});
+
+test('android: dismissing after the date step keeps the original start', async () => {
+  const previousOs = Platform.OS;
+  Platform.OS = 'android';
+  try {
+    const renderer = await renderScreen({});
+    const root = renderer.root;
+    const label = () =>
+      root.findByProps({ testID: 'start-datetime-button' }).props
+        .accessibilityLabel as string;
+
+    const before = label();
+    await ReactTestRenderer.act(() => {
+      root.findByProps({ testID: 'start-datetime-button' }).props.onPress();
+    });
+    await ReactTestRenderer.act(() => {
+      root.findByProps({ testID: 'start-datetime-picker' }).props.onValueChange(
+        { nativeEvent: { timestamp: Date.now() + 4 * 86400000, utcOffset: 0 } },
+        new Date(Date.now() + 4 * 86400000),
+      );
+    });
+    await ReactTestRenderer.act(() => {
+      root.findByProps({ testID: 'start-datetime-picker' }).props.onDismiss();
+    });
+
+    expect(label()).toBe(before);
+  } finally {
+    Platform.OS = previousOs;
+  }
+});
+
+test('android: date then time commits the picked day with the picked time', async () => {
+  const previousOs = Platform.OS;
+  Platform.OS = 'android';
+  try {
+    const onCreate = jest.fn();
+    const renderer = await renderScreen({ onCreate });
+    const root = renderer.root;
+
+    await fillValidForm(root);
+    const pickedDate = new Date(2030, 5, 15, 8, 0, 0);
+    const pickedTime = new Date(2030, 0, 5, 14, 30, 0);
+    await ReactTestRenderer.act(() => {
+      root.findByProps({ testID: 'start-datetime-button' }).props.onPress();
+    });
+    await ReactTestRenderer.act(() => {
+      root.findByProps({ testID: 'start-datetime-picker' }).props.onValueChange(
+        { nativeEvent: { timestamp: pickedDate.getTime(), utcOffset: 0 } },
+        pickedDate,
+      );
+    });
+    await ReactTestRenderer.act(() => {
+      root.findByProps({ testID: 'start-datetime-picker' }).props.onValueChange(
+        { nativeEvent: { timestamp: pickedTime.getTime(), utcOffset: 0 } },
+        pickedTime,
+      );
+    });
+    await submit(root);
+
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    const stored = new Date((onCreate.mock.calls[0][0] as Ride).startDateTime);
+    expect(stored.getFullYear()).toBe(2030);
+    expect(stored.getMonth()).toBe(5);
+    expect(stored.getDate()).toBe(15);
+    expect(stored.getHours()).toBe(14);
+    expect(stored.getMinutes()).toBe(30);
+  } finally {
+    Platform.OS = previousOs;
+  }
 });

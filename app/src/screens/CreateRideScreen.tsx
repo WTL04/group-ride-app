@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import DateTimePicker, {
-  DateTimePickerEvent,
+  DateTimePickerChangeEvent,
 } from '@react-native-community/datetimepicker';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -31,6 +31,7 @@ import {
   MAX_RIDERS_LIMIT,
   MAX_TEXT_LENGTH,
   NewRide,
+  Ride,
 } from '../types';
 
 type ScreenProps = CompositeScreenProps<
@@ -39,7 +40,7 @@ type ScreenProps = CompositeScreenProps<
 >;
 
 type Props = Partial<ScreenProps> & {
-  onCreate?: (ride: NewRide) => void;
+  onCreate?: (ride: Ride) => void;
 };
 
 const DECIMAL_RE = /^\d+(\.\d+)?$/;
@@ -93,7 +94,8 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
   const [avgPace, setAvgPace] = useState('');
   const [maxRiders, setMaxRiders] = useState('');
   const [description, setDescription] = useState('');
-  const [start, setStart] = useState<Date>(defaultStart);
+  const [start, setStart] = useState(defaultStart);
+  const [pendingDate, setPendingDate] = useState<Date | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
   const [errors, setErrors] = useState<string[]>([]);
@@ -108,25 +110,32 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
     setMaxRiders('');
     setDescription('');
     setStart(defaultStart());
+    setPendingDate(null);
   };
 
   const openPicker = () => {
+    setPendingDate(null);
     setPickerMode('date');
     setShowPicker(true);
   };
 
-  const handlePickerChange = (event: DateTimePickerEvent, selected?: Date) => {
-    if (event.type === 'dismissed') {
-      setShowPicker(false);
-      return;
-    }
-    const next = selected ?? start;
+  const handleDateSelected = (
+    event: DateTimePickerChangeEvent,
+    date: Date,
+  ) => {
     if (Platform.OS === 'android' && pickerMode === 'date') {
-      setStart(withCalendarDate(next, start));
+      setPendingDate(date);
       setPickerMode('time');
       return;
     }
-    setStart(next);
+    setStart(withCalendarDate(pendingDate ?? date, date));
+    setPendingDate(null);
+    setShowPicker(false);
+  };
+
+  const closePicker = () => {
+    setPendingDate(null);
+    setPickerMode('date');
     setShowPicker(false);
   };
 
@@ -165,15 +174,14 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
     } else if (parsedDistance > MAX_DISTANCE) {
       problems.push(`Distance must be ${MAX_DISTANCE} or less.`);
     }
-    if (
-      !paceSkipped &&
-      (parsedPace === null ||
-        parsedPace <= 0 ||
-        parsedPace > MAX_PACE_MIN_PER_UNIT)
-    ) {
-      problems.push(
-        `Average pace must be between 0 and ${MAX_PACE_MIN_PER_UNIT} min/${distanceUnit}.`,
-      );
+    if (!paceSkipped) {
+      if (parsedPace === null || parsedPace <= 0) {
+        problems.push('Average pace must be a plain number greater than 0.');
+      } else if (parsedPace > MAX_PACE_MIN_PER_UNIT) {
+        problems.push(
+          `Average pace must be ${MAX_PACE_MIN_PER_UNIT} min/${distanceUnit} or less.`,
+        );
+      }
     }
     if (
       parsedMaxRiders === null ||
@@ -216,11 +224,15 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
       description: trimmedDescription,
     };
     const ride = addRide(draft);
-    onCreate?.(draft);
+    onCreate?.(ride);
     setErrors([]);
-    setCreatedTitle(ride.title);
     resetForm();
-    navigation?.navigate('RideDetails', { rideId: ride.id });
+    if (navigation) {
+      setCreatedTitle('');
+      navigation.navigate('RideDetails', { rideId: ride.id });
+    } else {
+      setCreatedTitle(ride.title);
+    }
   };
 
   return (
@@ -271,13 +283,16 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
         </Text>
 
         <Text style={styles.label}>Units</Text>
-        <View style={styles.optionRow}>
-          {DISTANCE_UNITS.map(unit => (
+        <View
+          style={styles.optionRow}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Units for distance and average pace">
+          {DISTANCE_UNITS.map((unit, i) => (
             <Pressable
               key={unit}
               testID={`distance-unit-${unit}`}
-              accessibilityRole="button"
-              accessibilityLabel={`${unit === 'mi' ? 'Miles' : 'Kilometers'}`}
+              accessibilityRole="radio"
+              accessibilityLabel={`${unit === 'mi' ? 'Miles' : 'Kilometers'}, ${i + 1} of ${DISTANCE_UNITS.length}`}
               accessibilityState={{ selected: distanceUnit === unit }}
               style={[
                 styles.option,
@@ -307,14 +322,33 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
         />
         <Text style={styles.helper}>Numbers only, e.g. 25 or 25.5.</Text>
 
+        <Text style={styles.label}>
+          Average pace (min/{distanceUnit}, optional)
+        </Text>
+        <TextInput
+          testID="avg-pace-input"
+          accessibilityLabel={`Average pace in minutes per ${distanceUnit}, optional`}
+          style={styles.input}
+          value={avgPace}
+          onChangeText={setAvgPace}
+          placeholder="6"
+          keyboardType="decimal-pad"
+        />
+        <Text style={styles.helper}>
+          Minutes per {distanceUnit} — lower is faster. Leave blank to skip.
+        </Text>
+
         <Text style={styles.label}>Difficulty</Text>
-        <View style={styles.optionRow}>
-          {DIFFICULTIES.map(level => (
+        <View
+          style={styles.optionRow}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Difficulty">
+          {DIFFICULTIES.map((level, i) => (
             <Pressable
               key={level}
               testID={`difficulty-${level}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Difficulty ${level}`}
+              accessibilityRole="radio"
+              accessibilityLabel={`Difficulty ${level}, ${i + 1} of ${DIFFICULTIES.length}`}
               accessibilityState={{ selected: difficulty === level }}
               style={[
                 styles.option,
@@ -331,22 +365,6 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
             </Pressable>
           ))}
         </View>
-
-        <Text style={styles.label}>
-          Average pace (min/{distanceUnit}, optional)
-        </Text>
-        <TextInput
-          testID="avg-pace-input"
-          accessibilityLabel={`Average pace in minutes per ${distanceUnit}, optional`}
-          style={styles.input}
-          value={avgPace}
-          onChangeText={setAvgPace}
-          placeholder="6"
-          keyboardType="decimal-pad"
-        />
-        <Text style={styles.helper}>
-          Minutes per {distanceUnit} — lower is faster. Leave blank to skip.
-        </Text>
 
         <Text style={styles.label}>Max riders (up to {MAX_RIDERS_LIMIT})</Text>
         <TextInput
@@ -380,19 +398,21 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
         <Pressable
           testID="start-datetime-button"
           accessibilityRole="button"
-          accessibilityLabel={`Ride start, currently ${formatRideDateTime(start.toISOString())}`}
-          style={styles.input}
+          accessibilityLabel={`Ride start, currently ${formatRideDateTime(start.toISOString())}. Tap to change.`}
+          style={[styles.input, styles.dateButton]}
           onPress={openPicker}>
           <Text style={styles.inputText}>
             {formatRideDateTime(start.toISOString())}
           </Text>
+          <Text style={styles.chevron}>›</Text>
         </Pressable>
         {showPicker ? (
           <DateTimePicker
             testID="start-datetime-picker"
-            value={start}
+            value={pendingDate ?? start}
             mode={Platform.OS === 'ios' ? 'datetime' : pickerMode}
-            onValueChange={handlePickerChange}
+            onValueChange={handleDateSelected}
+            onDismiss={closePicker}
           />
         ) : null}
 
@@ -452,6 +472,15 @@ const styles = StyleSheet.create({
   inputText: {
     fontSize: 16,
     color: colors.text,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chevron: {
+    fontSize: 20,
+    color: colors.textMuted,
   },
   multiline: {
     minHeight: 76,

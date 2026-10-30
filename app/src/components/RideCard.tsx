@@ -10,15 +10,20 @@ interface Props {
 }
 
 export function RideCard({ ride, onPress }: Props) {
+  const full = ride.riders.length >= ride.maxRiders;
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable
+      style={styles.card}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${ride.title}, ${formatRideDateTime(ride.startDateTime)}, ${ride.startLocation} to ${ride.endLocation}`}>
       <Text style={styles.title}>{ride.title}</Text>
       <Text style={styles.meta}>
         {formatRideDateTime(ride.startDateTime)} • {ride.distance} {ride.distanceUnit} • {ride.difficulty}
       </Text>
       <Text style={styles.meta}>
         {ride.startLocation} → {ride.endLocation} • {ride.riders.length}/
-        {ride.maxRiders} riders
+        {ride.maxRiders} riders{full ? ' • Full' : ''}
       </Text>
       {ride.avgPace !== null ? (
         <Text style={styles.meta}>

@@ -17,8 +17,6 @@ export const MAX_PACE_MIN_PER_UNIT = 120;
 export interface Ride {
   id: string;
   title: string;
-  date: string;
-  /** Scheduled start, ISO string. */
   startDateTime: string;
   distance: number;
   distanceUnit: DistanceUnit;
@@ -38,7 +36,6 @@ export interface User {
 
 export interface NewRide {
   title: string;
-  /** Scheduled start, ISO string. */
   startDateTime: string;
   startLocation: string;
   endLocation: string;

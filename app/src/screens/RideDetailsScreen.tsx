@@ -4,14 +4,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { AppButton } from '../components/AppButton';
 import { formatRideDateTime } from '../lib/formatRideDate';
-import { useRides } from '../store/RidesContext';
+import { SELF_RIDER, useRides } from '../store/RidesContext';
 import { RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RideDetails'>;
 
 export function RideDetailsScreen({ route }: Props) {
-  const { rides } = useRides();
+  const { rides, joinRide } = useRides();
   const ride = rides.find(r => r.id === route.params.rideId);
 
   if (!ride) {
@@ -21,6 +21,10 @@ export function RideDetailsScreen({ route }: Props) {
       </ScreenContainer>
     );
   }
+
+  const joined = ride.riders.includes(SELF_RIDER);
+  const full = ride.riders.length >= ride.maxRiders;
+  const joinTitle = joined ? "You're in" : full ? 'Ride full' : 'Join ride';
 
   return (
     <ScreenContainer>
@@ -33,6 +37,7 @@ export function RideDetailsScreen({ route }: Props) {
       </Text>
       <Text style={styles.meta}>
         Riders: {ride.riders.length}/{ride.maxRiders}
+        {full ? ' • Full' : ''}
       </Text>
       {ride.avgPace !== null ? (
         <Text style={styles.meta}>
@@ -46,7 +51,13 @@ export function RideDetailsScreen({ route }: Props) {
         </>
       ) : null}
       <View style={styles.spacer} />
-      <AppButton title="Join ride" onPress={() => {}} />
+      <AppButton
+        title={joinTitle}
+        disabled={joined || full}
+        onPress={() => {
+          joinRide(ride.id);
+        }}
+      />
     </ScreenContainer>
   );
 }

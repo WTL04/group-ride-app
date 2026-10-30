@@ -4,7 +4,6 @@ export const mockRides: Ride[] = [
   {
     id: '1',
     title: 'Saturday Morning Loop',
-    date: '2026-11-01T08:00:00',
     startDateTime: '2026-11-01T08:00:00',
     distance: 28,
     distanceUnit: 'mi',
@@ -19,7 +18,6 @@ export const mockRides: Ride[] = [
   {
     id: '2',
     title: 'Evening City Cruise',
-    date: '2026-11-03T18:00:00',
     startDateTime: '2026-11-03T18:00:00',
     distance: 20,
     distanceUnit: 'km',
@@ -34,7 +32,6 @@ export const mockRides: Ride[] = [
   {
     id: '3',
     title: 'Hill Climb Challenge',
-    date: '2026-11-08T07:00:00',
     startDateTime: '2026-11-08T07:00:00',
     distance: 60,
     distanceUnit: 'km',

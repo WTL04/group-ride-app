@@ -2,9 +2,12 @@ import React, { createContext, useContext, useState } from 'react';
 import { mockRides } from '../data/mockRides';
 import { NewRide, Ride } from '../types';
 
+export const SELF_RIDER = 'You';
+
 interface RidesContextValue {
   rides: Ride[];
   addRide: (draft: NewRide) => Ride;
+  joinRide: (rideId: string, name?: string) => boolean;
 }
 
 const RidesContext = createContext<RidesContextValue | null>(null);
@@ -26,15 +29,31 @@ export function RidesProvider({
     const ride: Ride = {
       ...draft,
       id: createRideId(),
-      date: new Date().toISOString(),
       riders: [],
     };
     setRides(prev => [ride, ...prev]);
     return ride;
   };
 
+  const joinRide = (rideId: string, name: string = SELF_RIDER): boolean => {
+    let joined = false;
+    setRides(prev =>
+      prev.map(ride => {
+        if (ride.id !== rideId) {
+          return ride;
+        }
+        if (ride.riders.includes(name) || ride.riders.length >= ride.maxRiders) {
+          return ride;
+        }
+        joined = true;
+        return { ...ride, riders: [...ride.riders, name] };
+      }),
+    );
+    return joined;
+  };
+
   return (
-    <RidesContext.Provider value={{ rides, addRide }}>
+    <RidesContext.Provider value={{ rides, addRide, joinRide }}>
       {children}
     </RidesContext.Provider>
   );

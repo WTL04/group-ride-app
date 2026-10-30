@@ -5,11 +5,18 @@ import { colors, spacing } from '../theme';
 interface Props {
   title: string;
   onPress: () => void;
+  accessibilityLabel?: string;
+  disabled?: boolean;
 }
 
-export function AppButton({ title, onPress }: Props) {
+export function AppButton({ title, onPress, accessibilityLabel, disabled }: Props) {
   return (
-    <Pressable style={styles.button} onPress={onPress}>
+    <Pressable
+      style={[styles.button, disabled && styles.disabled]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled: disabled ?? false }}>
       <Text style={styles.text}>{title}</Text>
     </Pressable>
   );
@@ -22,6 +29,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
+  },
+  disabled: {
+    opacity: 0.5,
   },
   text: {
     color: '#fff',

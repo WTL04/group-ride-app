@@ -27,17 +27,17 @@ export function AppNavigator() {
   return (
     <RidesProvider>
       <Stack.Navigator>
-      <Stack.Screen
-        name="MainTabs"
-        component={MainTabs}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="RideDetails"
-        component={RideDetailsScreen}
-        options={{ title: 'Ride details' }}
-      />
-    </Stack.Navigator>
+        <Stack.Screen
+          name="MainTabs"
+          component={MainTabs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="RideDetails"
+          component={RideDetailsScreen}
+          options={{ title: 'Ride details' }}
+        />
+      </Stack.Navigator>
     </RidesProvider>
   );
 }

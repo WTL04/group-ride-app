@@ -3,8 +3,8 @@ import type { NewRide, Ride } from '../types';
 
 export const API_BASE_URL =
   Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000';
+    ? 'http://10.0.2.2:8000'
+    : 'http://localhost:8000';
 
 const MI_TO_KM = 1.60934;
 

@@ -13,3 +13,10 @@ this will build the app and connect it to the metro bundler, allowing you to deb
 
 when to build
 - new packages installed
+
+
+### start fastapi backend 
+```
+uvicorn src.main:app --reload 
+```
+this will start the fastapi server on localhost:8000

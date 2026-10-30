@@ -40,6 +40,7 @@ export function RidesProvider({
       fetched => {
         if (!cancelled) {
           setRides(fetched);
+          setLoadError(null);
           setLoading(false);
         }
       },

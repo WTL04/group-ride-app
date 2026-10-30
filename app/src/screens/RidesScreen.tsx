@@ -26,7 +26,7 @@ export function RidesScreen({ navigation }: Props) {
   return (
     <ScreenContainer>
       <Text style={styles.heading}>All rides</Text>
-      {loadError ? <Text>{loadError}</Text> : null}
+      {loadError && rides.length === 0 ? <Text>{loadError}</Text> : null}
       <FlatList
         data={rides}
         keyExtractor={item => item.id}

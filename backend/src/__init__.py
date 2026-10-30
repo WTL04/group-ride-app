@@ -1,0 +1,1 @@
+"""Group ride backend (FastAPI)."""

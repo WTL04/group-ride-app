@@ -1,0 +1,18 @@
+# Web
+fastapi
+uvicorn[standard]
+
+# Postgres (async driver, matches schema.sql)
+asyncpg
+
+# Realtime fan-out for live positions
+redis
+
+# Env / config
+python-dotenv
+
+# Tests
+pytest
+httpx
+pytest-asyncio
+anyio

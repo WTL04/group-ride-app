@@ -5,7 +5,7 @@ import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { RideCard } from '../components/RideCard';
-import { mockRides } from '../data/mockRides';
+import { useRides } from '../store/RidesContext';
 import { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 
@@ -15,11 +15,20 @@ type Props = CompositeScreenProps<
 >;
 
 export function HomeScreen({ navigation }: Props) {
+  const { rides, loading, loadError } = useRides();
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <Text style={styles.heading}>Loading rides…</Text>
+      </ScreenContainer>
+    );
+  }
   return (
     <ScreenContainer>
       <Text style={styles.heading}>Upcoming rides</Text>
+      {loadError ? <Text>{loadError}</Text> : null}
       <FlatList
-        data={mockRides}
+        data={rides}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <RideCard

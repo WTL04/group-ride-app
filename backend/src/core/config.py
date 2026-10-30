@@ -1,4 +1,3 @@
-# TODO: Set up redis configuration
 from dotenv import load_dotenv
 
 load_dotenv()

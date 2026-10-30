@@ -10,6 +10,7 @@ import { CreateRideScreen } from '../src/screens/CreateRideScreen';
 import { AppButton } from '../src/components/AppButton';
 import { RidesProvider } from '../src/store/RidesContext';
 import { Ride } from '../src/types';
+import { installFetchMock } from './fixtures';
 
 const METRICS = {
   insets: { top: 0, left: 0, right: 0, bottom: 0 },
@@ -55,14 +56,24 @@ async function fillValidForm(root: ReactTestRenderer.ReactTestInstance) {
 }
 
 async function submit(root: ReactTestRenderer.ReactTestInstance) {
-  await ReactTestRenderer.act(() => {
-    root.findByType(AppButton).props.onPress();
+  await ReactTestRenderer.act(async () => {
+    await root.findByType(AppButton).props.onPress();
   });
 }
 
 function errorText(root: ReactTestRenderer.ReactTestInstance): string {
   return String(root.findByProps({ testID: 'form-error' }).props.children);
 }
+
+let restoreFetch: () => void;
+
+beforeEach(() => {
+  restoreFetch = installFetchMock();
+});
+
+afterEach(() => {
+  restoreFetch();
+});
 
 test('submits a ride draft with parsed values', async () => {
   const onCreate = jest.fn();

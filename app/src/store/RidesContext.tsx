@@ -1,20 +1,24 @@
-import React, { createContext, useContext, useState } from 'react';
-import { mockRides } from '../data/mockRides';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+import { createRide as postRide, listRides } from '../lib/api';
 import { NewRide, Ride } from '../types';
 
 export const SELF_RIDER = 'You';
 
 interface RidesContextValue {
   rides: Ride[];
-  addRide: (draft: NewRide) => Ride;
+  loading: boolean;
+  loadError: string | null;
+  addRide: (draft: NewRide) => Promise<Ride>;
   joinRide: (rideId: string, name?: string) => boolean;
 }
 
 const RidesContext = createContext<RidesContextValue | null>(null);
-
-function createRideId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 export function RidesProvider({
   children,
@@ -23,19 +27,44 @@ export function RidesProvider({
   children: React.ReactNode;
   initialRides?: Ride[];
 }) {
-  const [rides, setRides] = useState<Ride[]>(initialRides ?? mockRides);
+  const [rides, setRides] = useState<Ride[]>(initialRides ?? []);
+  const [loading, setLoading] = useState(initialRides === undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const addRide = (draft: NewRide): Ride => {
-    const ride: Ride = {
-      ...draft,
-      id: createRideId(),
-      riders: [],
+  useEffect(() => {
+    if (initialRides !== undefined) {
+      return;
+    }
+    let cancelled = false;
+    listRides().then(
+      fetched => {
+        if (!cancelled) {
+          setRides(fetched);
+          setLoading(false);
+        }
+      },
+      (e: unknown) => {
+        if (!cancelled) {
+          setLoadError(
+            e instanceof Error ? e.message : 'Could not load rides.',
+          );
+          setLoading(false);
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
     };
+  }, [initialRides]);
+
+  const addRide = useCallback(async (draft: NewRide): Promise<Ride> => {
+    const ride = await postRide(draft);
     setRides(prev => [ride, ...prev]);
     return ride;
-  };
+  }, []);
 
   const joinRide = (rideId: string, name: string = SELF_RIDER): boolean => {
+    // Local until server join lands with memberships and guest tokens.
     let joined = false;
     setRides(prev =>
       prev.map(ride => {
@@ -53,7 +82,8 @@ export function RidesProvider({
   };
 
   return (
-    <RidesContext.Provider value={{ rides, addRide, joinRide }}>
+    <RidesContext.Provider
+      value={{ rides, loading, loadError, addRide, joinRide }}>
       {children}
     </RidesContext.Provider>
   );

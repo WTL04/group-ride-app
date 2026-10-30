@@ -1,6 +1,6 @@
-import { Ride } from '../types';
+import { Ride } from '../src/types';
 
-export const mockRides: Ride[] = [
+export const fixtureRides: Ride[] = [
   {
     id: '1',
     title: 'Saturday Morning Loop',
@@ -29,18 +29,25 @@ export const mockRides: Ride[] = [
     riders: ['Cara'],
     description: 'Casual evening spin through the city.',
   },
-  {
-    id: '3',
-    title: 'Hill Climb Challenge',
-    startDateTime: '2026-11-08T07:00:00',
-    distance: 60,
-    distanceUnit: 'km',
-    startLocation: 'North Trailhead',
-    endLocation: 'Summit Overlook',
-    difficulty: 'challenging',
-    avgPace: 4,
-    maxRiders: 8,
-    riders: ['Dan', 'Eve', 'Frank'],
-    description: 'Climbing-focused ride for experienced riders.',
-  },
 ];
+
+export function installFetchMock() {
+  const realFetch = globalThis.fetch;
+  let nextId = 101;
+  const mock = jest.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') {
+      const body = JSON.parse(String(init.body ?? '{}'));
+      const rideId = nextId++;
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({ ride_id: rideId, ...body }),
+      };
+    }
+    return { ok: true, status: 200, json: async () => [] };
+  });
+  globalThis.fetch = mock as unknown as typeof fetch;
+  return () => {
+    globalThis.fetch = realFetch;
+  };
+}

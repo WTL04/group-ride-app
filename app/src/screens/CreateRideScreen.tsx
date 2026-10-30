@@ -139,7 +139,7 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
     setShowPicker(false);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const problems: string[] = [];
     const trimmedTitle = title.trim();
     const trimmedStart = startLocation.trim();
@@ -223,15 +223,22 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
       maxRiders: parsedMaxRiders,
       description: trimmedDescription,
     };
-    const ride = addRide(draft);
-    onCreate?.(ride);
-    setErrors([]);
-    resetForm();
-    if (navigation) {
+    try {
+      const ride = await addRide(draft);
+      onCreate?.(ride);
+      setErrors([]);
+      resetForm();
+      if (navigation) {
+        setCreatedTitle('');
+        navigation.navigate('RideDetails', { rideId: ride.id });
+      } else {
+        setCreatedTitle(ride.title);
+      }
+    } catch (e) {
+      setErrors([
+        e instanceof Error ? e.message : 'Could not create ride.',
+      ]);
       setCreatedTitle('');
-      navigation.navigate('RideDetails', { rideId: ride.id });
-    } else {
-      setCreatedTitle(ride.title);
     }
   };
 

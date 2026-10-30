@@ -9,7 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RideDetailsScreen } from '../src/screens/RideDetailsScreen';
 import { RideCard } from '../src/components/RideCard';
 import { RidesProvider } from '../src/store/RidesContext';
-import { mockRides } from '../src/data/mockRides';
+import { fixtureRides } from './fixtures';
 
 const METRICS = {
   insets: { top: 0, left: 0, right: 0, bottom: 0 },
@@ -24,7 +24,7 @@ function detailTexts(renderer: ReactTestRenderer.ReactTestRenderer): string {
     .join(' ');
 }
 
-async function renderDetails(rideId: string, initialRides = mockRides) {
+async function renderDetails(rideId: string, initialRides = fixtureRides) {
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
   await ReactTestRenderer.act(() => {
     renderer = ReactTestRenderer.create(
@@ -71,10 +71,10 @@ test('joining twice does not duplicate you', async () => {
 
 test('a full ride cannot be joined and says so', async () => {
   const fullRide = {
-    ...mockRides[0],
+    ...fixtureRides[0],
     riders: Array.from({ length: 10 }, (_, i) => `R${i}`),
   };
-  const renderer = await renderDetails(fullRide.id, [fullRide, ...mockRides.slice(1)]);
+  const renderer = await renderDetails(fullRide.id, [fullRide, ...fixtureRides.slice(1)]);
 
   expect(detailTexts(renderer)).toMatch(/Ride full/);
   await ReactTestRenderer.act(() => {
@@ -85,7 +85,7 @@ test('a full ride cannot be joined and says so', async () => {
 
 test('a full ride card carries the full signal', async () => {
   const fullRide = {
-    ...mockRides[0],
+    ...fixtureRides[0],
     riders: Array.from({ length: 10 }, (_, i) => `R${i}`),
   };
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;

@@ -65,7 +65,7 @@ A local recreational bike group. Pilot group and ride leader: to be named.
 
 **Backend**
 
-- Node.js (current LTS) with TypeScript; framework Fastify (_proposed_; NestJS is the alternative)
+- Fastapi 
 - Real-time: WebSockets, with Redis pub/sub to fan out across server instances
 - Ride-scoped guest tokens issued on join, since there are no accounts in v1 (_proposed_)
 

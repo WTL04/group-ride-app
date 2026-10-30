@@ -9,12 +9,14 @@ router = APIRouter()
 _RIDE_COLUMNS: tuple[str, ...] = (
     "ride_id",
     "title",
+    "starts_at",
     "start_location",
     "end_location",
     "distance_km",
     "difficulty",
     "avg_pace",
     "max_riders",
+    "description",
 )
 _COLUMNS = ", ".join(_RIDE_COLUMNS)
 _INSERT_TUPLE = tuple(c for c in _RIDE_COLUMNS if c != "ride_id")
@@ -38,12 +40,14 @@ async def create_ride(body: RideCreate) -> Ride:
                 VALUES ({_PLACEHOLDERS})
                 RETURNING {_COLUMNS}""",
             body.title,
+            body.starts_at,
             body.start_location,
             body.end_location,
             body.distance_km,
             body.difficulty,
             body.avg_pace,
             body.max_riders,
+            body.description,
         )
     except asyncpg.CheckViolationError as exc:
         raise HTTPException(

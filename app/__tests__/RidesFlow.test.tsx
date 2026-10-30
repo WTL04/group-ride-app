@@ -12,25 +12,35 @@ import { RideDetailsScreen } from '../src/screens/RideDetailsScreen';
 import { RideCard } from '../src/components/RideCard';
 import { AppButton } from '../src/components/AppButton';
 import { RidesProvider } from '../src/store/RidesContext';
-import { mockRides } from '../src/data/mockRides';
+import { fixtureRides, installFetchMock } from './fixtures';
 
 const METRICS = {
   insets: { top: 0, left: 0, right: 0, bottom: 0 },
   frame: { x: 0, y: 0, width: 390, height: 844 },
 };
 
+let restoreFetch: () => void;
+
+beforeEach(() => {
+  restoreFetch = installFetchMock();
+});
+
+afterEach(() => {
+  restoreFetch();
+});
+
 test('a created ride appears in the list with its route, pace, and description', async () => {
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
-  await ReactTestRenderer.act(() => {
-    renderer = ReactTestRenderer.create(
-      <SafeAreaProvider initialMetrics={METRICS}>
-        <RidesProvider>
-          <CreateRideScreen />
-          <RidesScreen navigation={{ navigate: jest.fn() } as any} route={{} as any} />
-        </RidesProvider>
-      </SafeAreaProvider>,
-    );
-  });
+    await ReactTestRenderer.act(() => {
+      renderer = ReactTestRenderer.create(
+        <SafeAreaProvider initialMetrics={METRICS}>
+          <RidesProvider initialRides={fixtureRides}>
+            <CreateRideScreen />
+            <RidesScreen navigation={{ navigate: jest.fn() } as any} route={{} as any} />
+          </RidesProvider>
+        </SafeAreaProvider>,
+      );
+    });
   const root = renderer!.root;
   const createNode = root.findByType(CreateRideScreen);
 
@@ -43,12 +53,12 @@ test('a created ride appears in the list with its route, pace, and description',
     createNode.findByProps({ testID: 'max-riders-input' }).props.onChangeText('8');
     createNode.findByProps({ testID: 'description-input' }).props.onChangeText('Coffee stop halfway.');
   });
-  await ReactTestRenderer.act(() => {
-    createNode.findByType(AppButton).props.onPress();
+  await ReactTestRenderer.act(async () => {
+    await createNode.findByType(AppButton).props.onPress();
   });
 
   const cards = root.findByType(RidesScreen).findAllByType(RideCard);
-  expect(cards.length).toBe(mockRides.length + 1);
+  expect(cards.length).toBe(fixtureRides.length + 1);
   const created = cards.find(c => c.props.ride.title === 'River Ramble')!;
   expect(created).toBeTruthy();
   const cardTexts = created
@@ -91,8 +101,8 @@ test('a created ride renders in details with route, pace, and description', asyn
     root.findByProps({ testID: 'max-riders-input' }).props.onChangeText('6');
     root.findByProps({ testID: 'description-input' }).props.onChangeText('Regroup at the top.');
   });
-  await ReactTestRenderer.act(() => {
-    root.findByType(AppButton).props.onPress();
+  await ReactTestRenderer.act(async () => {
+    await root.findByType(AppButton).props.onPress();
   });
 
   const createdId = navigation.navigate.mock.calls[0][1].rideId as string;

@@ -15,10 +15,18 @@ type Props = CompositeScreenProps<
 >;
 
 export function RidesScreen({ navigation }: Props) {
-  const { rides } = useRides();
+  const { rides, loading, loadError } = useRides();
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <Text style={styles.heading}>Loading rides…</Text>
+      </ScreenContainer>
+    );
+  }
   return (
     <ScreenContainer>
       <Text style={styles.heading}>All rides</Text>
+      {loadError ? <Text>{loadError}</Text> : null}
       <FlatList
         data={rides}
         keyExtractor={item => item.id}

@@ -16,3 +16,22 @@ jest.mock('@react-native-community/datetimepicker', () => {
     return React.createElement('View', { testID: props.testID });
   };
 });
+
+jest.mock('@maplibre/maplibre-react-native', () => {
+  const React = require('react');
+  const mock = props =>
+    React.createElement('View', { testID: props.testID }, props.children);
+  return {
+    Map: mock,
+    Camera: () => null,
+    Marker: () => null,
+    GeoJSONSource: mock,
+    Layer: () => null,
+  };
+});
+
+jest.mock(
+  '@env',
+  () => ({ STADIA_API_KEY: '' }),
+  { virtual: true },
+);

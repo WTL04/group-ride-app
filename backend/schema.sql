@@ -1,9 +1,6 @@
 -- enumeration for ride difficulty
-DO $$ BEGIN
-  CREATE TYPE ride_difficulty AS ENUM ('challenging', 'intermediate', 'casual');
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
+CREATE TYPE ride_difficulty AS ENUM ('challenging', 'intermediate', 'casual');
+
 
 CREATE TABLE IF NOT EXISTS users (
   user_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

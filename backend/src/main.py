@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .core.db import close_pool
-from .routes import live, rides
+from .routes import live, rides, maps
 
 
 @asynccontextmanager
@@ -14,6 +14,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="group-ride", lifespan=lifespan)
 app.include_router(rides.router, prefix="/rides", tags=["rides"])
+app.include_router(maps.router, prefix="/maps", tags=["rides"])
 app.include_router(live.router)
 
 

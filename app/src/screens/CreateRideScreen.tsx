@@ -16,7 +16,10 @@ import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { AppButton } from '../components/AppButton';
+import { EMPTY_ROUTE, RoutePicker, RouteValue } from '../components/RoutePicker';
+import { STADIA_API_KEY } from '@env';
 import { formatRideDateTime } from '../lib/formatRideDate';
+import { fromKm } from '../lib/stadia';
 import { useRides } from '../store/RidesContext';
 import { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
@@ -100,9 +103,30 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
   const [errors, setErrors] = useState<string[]>([]);
   const [createdTitle, setCreatedTitle] = useState('');
+  const [route, setRoute] = useState<RouteValue>(EMPTY_ROUTE);
+
+  const handleRouteChange = (next: RouteValue) => {
+    setRoute(next);
+    if (next.startLabel) setStartLocation(next.startLabel);
+    if (next.endLabel) setEndLocation(next.endLabel);
+    if (next.distanceKm !== null) {
+      setDistance(fromKm(next.distanceKm, distanceUnit).toFixed(1));
+    }
+    if (next.distanceKm === null && next.start === null) {
+      setDistance('');
+    }
+  };
+
+  const handleUnitChange = (unit: DistanceUnit) => {
+    setDistanceUnit(unit);
+    if (route.distanceKm !== null) {
+      setDistance(fromKm(route.distanceKm, unit).toFixed(1));
+    }
+  };
 
   const resetForm = () => {
     setTitle('');
+    setRoute({ ...EMPTY_ROUTE });
     setStartLocation('');
     setEndLocation('');
     setDistance('');
@@ -261,6 +285,18 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
           Up to {MAX_TEXT_LENGTH} characters.
         </Text>
 
+        <Text style={styles.label}>Route (Stadia map)</Text>
+        <RoutePicker
+          apiKey={STADIA_API_KEY ?? ''}
+          distanceUnit={distanceUnit}
+          value={route}
+          onChange={handleRouteChange}
+        />
+        <Text style={styles.helper}>
+          Tap map to set start/end. Labels and distance fill in, editable
+          below.
+        </Text>
+
         <Text style={styles.label}>Start location</Text>
         <TextInput
           testID="start-location-input"
@@ -305,7 +341,7 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
                 styles.option,
                 distanceUnit === unit && styles.optionSelected,
               ]}
-              onPress={() => setDistanceUnit(unit)}>
+              onPress={() => handleUnitChange(unit)}>
               <Text
                 style={[
                   styles.optionText,

@@ -5,3 +5,4 @@ backend/dist/
 __pycache__/
 *.pyc
 *venv/
+.grip

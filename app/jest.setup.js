@@ -35,3 +35,25 @@ jest.mock(
   () => ({ STADIA_API_KEY: '' }),
   { virtual: true },
 );
+
+jest.mock('react-native-gesture-handler', () => {
+  const React = require('react');
+  return {
+    GestureHandlerRootView: ({ children, style }) =>
+      React.createElement('View', { style }, children),
+  };
+});
+
+jest.mock('@gorhom/bottom-sheet', () => {
+  const React = require('react');
+  const { forwardRef, useImperativeHandle } = React;
+  const BottomSheet = forwardRef((props, ref) => {
+    useImperativeHandle(ref, () => ({ snapToIndex: jest.fn() }));
+    return React.createElement('View', null, props.children);
+  });
+  const BottomSheetScrollView = props =>
+    React.createElement('View', null, props.children);
+  const BottomSheetTextInput = props =>
+    React.createElement('View', { testID: props.testID });
+  return { __esModule: true, default: BottomSheet, BottomSheet, BottomSheetScrollView, BottomSheetTextInput };
+});

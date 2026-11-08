@@ -33,6 +33,7 @@ interface Props {
   distanceUnit: DistanceUnit;
   value: RouteValue;
   onChange: (next: RouteValue) => void;
+  fullscreen?: boolean;
 }
 
 export const EMPTY_ROUTE: RouteValue = {
@@ -63,7 +64,13 @@ function toGeoJSON(coordinates: LatLon[]): GeoJSON.FeatureCollection {
   };
 }
 
-export function RoutePicker({ apiKey, distanceUnit, value, onChange }: Props) {
+export function RoutePicker({
+  apiKey,
+  distanceUnit,
+  value,
+  onChange,
+  fullscreen,
+}: Props) {
   const [target, setTarget] = useState<'start' | 'end'>('start');
   const [status, setStatus] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -111,7 +118,7 @@ export function RoutePicker({ apiKey, distanceUnit, value, onChange }: Props) {
         setStatus('');
       } catch (e) {
         if (mySeq !== seq.current) return;
-        onChange({ ...current, start, end, snapped: false });
+        onChange({ ...current, start, end, coordinates: [], distanceKm: null, snapped: false });
         setStatus(e instanceof Error ? e.message : 'Routing failed.');
       } finally {
         if (mySeq === seq.current) setLoading(false);
@@ -150,6 +157,7 @@ export function RoutePicker({ apiKey, distanceUnit, value, onChange }: Props) {
 
   const clear = useCallback(() => {
     seq.current += 1;
+    setLoading(false);
     setStatus('');
     setTarget('start');
     onChange({ ...EMPTY_ROUTE });
@@ -160,7 +168,7 @@ export function RoutePicker({ apiKey, distanceUnit, value, onChange }: Props) {
     : [-73.97, 40.78];
 
   return (
-    <View>
+    <View style={fullscreen && styles.fullRoot}>
       <View style={styles.row}>
         <Pressable
           testID="route-set-start"
@@ -193,7 +201,9 @@ export function RoutePicker({ apiKey, distanceUnit, value, onChange }: Props) {
         </Pressable>
       </View>
 
-      <View testID="route-picker-map" style={styles.mapWrap}>
+      <View
+        testID="route-picker-map"
+        style={[styles.mapWrap, fullscreen && styles.mapWrapFull]}>
         <Map
           style={styles.map}
           mapStyle={apiKey ? stadiaStyleUrl(apiKey) : FALLBACK_STYLE}
@@ -244,6 +254,7 @@ export function RoutePicker({ apiKey, distanceUnit, value, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
+  fullRoot: { flex: 1 },
   row: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs },
   chip: {
     borderColor: colors.border,
@@ -262,6 +273,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     borderColor: colors.border,
     borderWidth: 1,
+  },
+  mapWrapFull: {
+    height: undefined,
+    flex: 1,
+    borderRadius: 0,
+    marginTop: 0,
+    borderWidth: 0,
   },
   map: { flex: 1 },
   pinStart: {

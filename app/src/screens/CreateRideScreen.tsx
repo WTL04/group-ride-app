@@ -1,31 +1,24 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Platform,
-  Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
-import DateTimePicker, {
-  DateTimePickerChangeEvent,
-} from '@react-native-community/datetimepicker';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import type BottomSheet from '@gorhom/bottom-sheet';
+import { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScreenContainer } from '../components/ScreenContainer';
-import { AppButton } from '../components/AppButton';
 import { EMPTY_ROUTE, RoutePicker, RouteValue } from '../components/RoutePicker';
+import { RideFormSheet } from '../components/create-ride/RideFormSheet';
 import { STADIA_API_KEY } from '@env';
-import { formatRideDateTime } from '../lib/formatRideDate';
 import { fromKm } from '../lib/stadia';
 import { useRides } from '../store/RidesContext';
 import { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { colors, spacing } from '../theme';
 import {
-  DIFFICULTIES,
-  DISTANCE_UNITS,
   Difficulty,
   DistanceUnit,
   MAX_DESCRIPTION_LENGTH,
@@ -104,13 +97,22 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
   const [errors, setErrors] = useState<string[]>([]);
   const [createdTitle, setCreatedTitle] = useState('');
   const [route, setRoute] = useState<RouteValue>(EMPTY_ROUTE);
+  const sheetRef = useRef<BottomSheet>(null);
+  const unitRef = useRef<DistanceUnit>(distanceUnit);
+  unitRef.current = distanceUnit;
+
+  const handleSnap = useCallback((_index: number) => {}, []);
+
+  const expandSheet = useCallback(() => {
+    sheetRef.current?.snapToIndex(2);
+  }, []);
 
   const handleRouteChange = (next: RouteValue) => {
     setRoute(next);
     if (next.startLabel) setStartLocation(next.startLabel);
     if (next.endLabel) setEndLocation(next.endLabel);
     if (next.distanceKm !== null) {
-      setDistance(fromKm(next.distanceKm, distanceUnit).toFixed(1));
+      setDistance(fromKm(next.distanceKm, unitRef.current).toFixed(1));
     }
     if (next.distanceKm === null && next.start === null) {
       setDistance('');
@@ -267,307 +269,82 @@ export function CreateRideScreen({ navigation, onCreate }: Props) {
   };
 
   return (
-    <ScreenContainer>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>Create a ride</Text>
-
-        <Text style={styles.label}>Title</Text>
-        <TextInput
-          testID="title-input"
-          accessibilityLabel="Ride title"
-          style={styles.input}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Saturday Morning Loop"
-          maxLength={MAX_TEXT_LENGTH}
-        />
-        <Text style={styles.helper}>
-          Up to {MAX_TEXT_LENGTH} characters.
-        </Text>
-
-        <Text style={styles.label}>Route (Stadia map)</Text>
+    <GestureHandlerRootView style={styles.root}>
+      <View style={styles.map}>
         <RoutePicker
           apiKey={STADIA_API_KEY ?? ''}
           distanceUnit={distanceUnit}
           value={route}
           onChange={handleRouteChange}
+          fullscreen
         />
-        <Text style={styles.helper}>
-          Tap map to set start/end. Labels and distance fill in, editable
-          below.
-        </Text>
-
-        <Text style={styles.label}>Start location</Text>
+      </View>
+      <View style={styles.searchFloat} pointerEvents="box-none">
         <TextInput
-          testID="start-location-input"
-          accessibilityLabel="Ride start location"
-          style={styles.input}
-          value={startLocation}
-          onChangeText={setStartLocation}
-          placeholder="Central Park"
+          testID="route-search-bar"
+          accessibilityLabel="Search or set ride title"
+          style={styles.search}
+          value={title}
+          onChangeText={setTitle}
+          onFocus={expandSheet}
+          placeholder="Search or name this ride"
           maxLength={MAX_TEXT_LENGTH}
         />
-        <Text style={styles.helper}>
-          Up to {MAX_TEXT_LENGTH} characters.
-        </Text>
-
-        <Text style={styles.label}>End location</Text>
-        <TextInput
-          testID="end-location-input"
-          accessibilityLabel="Ride end location"
-          style={styles.input}
-          value={endLocation}
-          onChangeText={setEndLocation}
-          placeholder="Riverside Cafe"
-          maxLength={MAX_TEXT_LENGTH}
-        />
-        <Text style={styles.helper}>
-          Up to {MAX_TEXT_LENGTH} characters.
-        </Text>
-
-        <Text style={styles.label}>Units</Text>
-        <View
-          style={styles.optionRow}
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Units for distance and average pace">
-          {DISTANCE_UNITS.map((unit, i) => (
-            <Pressable
-              key={unit}
-              testID={`distance-unit-${unit}`}
-              accessibilityRole="radio"
-              accessibilityLabel={`${unit === 'mi' ? 'Miles' : 'Kilometers'}, ${i + 1} of ${DISTANCE_UNITS.length}`}
-              accessibilityState={{ selected: distanceUnit === unit }}
-              style={[
-                styles.option,
-                distanceUnit === unit && styles.optionSelected,
-              ]}
-              onPress={() => handleUnitChange(unit)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  distanceUnit === unit && styles.optionTextSelected,
-                ]}>
-                {unit}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={styles.label}>Distance ({distanceUnit})</Text>
-        <TextInput
-          testID="distance-input"
-          accessibilityLabel={`Ride distance in ${distanceUnit}`}
-          style={styles.input}
-          value={distance}
-          onChangeText={setDistance}
-          placeholder="25"
-          keyboardType="decimal-pad"
-        />
-        <Text style={styles.helper}>Numbers only, e.g. 25 or 25.5.</Text>
-
-        <Text style={styles.label}>
-          Average pace (min/{distanceUnit}, optional)
-        </Text>
-        <TextInput
-          testID="avg-pace-input"
-          accessibilityLabel={`Average pace in minutes per ${distanceUnit}, optional`}
-          style={styles.input}
-          value={avgPace}
-          onChangeText={setAvgPace}
-          placeholder="6"
-          keyboardType="decimal-pad"
-        />
-        <Text style={styles.helper}>
-          Minutes per {distanceUnit} — lower is faster. Leave blank to skip.
-        </Text>
-
-        <Text style={styles.label}>Difficulty</Text>
-        <View
-          style={styles.optionRow}
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Difficulty">
-          {DIFFICULTIES.map((level, i) => (
-            <Pressable
-              key={level}
-              testID={`difficulty-${level}`}
-              accessibilityRole="radio"
-              accessibilityLabel={`Difficulty ${level}, ${i + 1} of ${DIFFICULTIES.length}`}
-              accessibilityState={{ selected: difficulty === level }}
-              style={[
-                styles.option,
-                difficulty === level && styles.optionSelected,
-              ]}
-              onPress={() => setDifficulty(level)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  difficulty === level && styles.optionTextSelected,
-                ]}>
-                {level}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={styles.label}>Max riders (up to {MAX_RIDERS_LIMIT})</Text>
-        <TextInput
-          testID="max-riders-input"
-          accessibilityLabel="Maximum number of riders"
-          style={styles.input}
-          value={maxRiders}
-          onChangeText={setMaxRiders}
-          placeholder="10"
-          keyboardType="number-pad"
-          maxLength={3}
-        />
-
-        <Text style={styles.label}>Description (optional)</Text>
-        <TextInput
-          testID="description-input"
-          accessibilityLabel="Ride description, optional"
-          style={[styles.input, styles.multiline]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="No-drop ride, regroup at the top of each climb."
-          multiline
-          numberOfLines={3}
-          maxLength={MAX_DESCRIPTION_LENGTH}
-        />
-        <Text style={styles.helper}>
-          Up to {MAX_DESCRIPTION_LENGTH} characters.
-        </Text>
-
-        <Text style={styles.label}>Starts</Text>
-        <Pressable
-          testID="start-datetime-button"
-          accessibilityRole="button"
-          accessibilityLabel={`Ride start, currently ${formatRideDateTime(start.toISOString())}. Tap to change.`}
-          style={[styles.input, styles.dateButton]}
-          onPress={openPicker}>
-          <Text style={styles.inputText}>
-            {formatRideDateTime(start.toISOString())}
-          </Text>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-        {showPicker ? (
-          <DateTimePicker
-            testID="start-datetime-picker"
-            value={pendingDate ?? start}
-            mode={Platform.OS === 'ios' ? 'datetime' : pickerMode}
-            onValueChange={handleDateSelected}
-            onDismiss={closePicker}
-          />
-        ) : null}
-
-        {errors.length > 0 ? (
-          <Text
-            testID="form-error"
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-            style={styles.error}>
-            {errors.join('\n')}
-          </Text>
-        ) : null}
-        {createdTitle ? (
-          <Text
-            testID="form-success"
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-            style={styles.success}>
-            Ride &ldquo;{createdTitle}&rdquo; created.
-          </Text>
-        ) : null}
-
-        <View style={styles.spacer} />
-        <AppButton title="Create ride" onPress={handleCreate} />
-        <View style={styles.spacer} />
-      </ScrollView>
-    </ScreenContainer>
+      </View>
+      <RideFormSheet
+        sheetRef={sheetRef}
+        onSnap={handleSnap}
+        title={title}
+        onTitle={setTitle}
+        startLocation={startLocation}
+        onStartLocation={setStartLocation}
+        endLocation={endLocation}
+        onEndLocation={setEndLocation}
+        distance={distance}
+        onDistance={setDistance}
+        distanceUnit={distanceUnit}
+        onUnit={handleUnitChange}
+        difficulty={difficulty}
+        onDifficulty={setDifficulty}
+        avgPace={avgPace}
+        onAvgPace={setAvgPace}
+        maxRiders={maxRiders}
+        onMaxRiders={setMaxRiders}
+        description={description}
+        onDescription={setDescription}
+        start={start}
+        onOpenPicker={openPicker}
+        showPicker={showPicker}
+        pickerMode={pickerMode}
+        pendingDate={pendingDate}
+        onDateSelected={handleDateSelected}
+        onClosePicker={closePicker}
+        route={route}
+        errors={errors}
+        createdTitle={createdTitle}
+        onCreate={handleCreate}
+      />
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  heading: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginVertical: spacing.md,
+  root: { flex: 1, backgroundColor: colors.background },
+  map: { flex: 1 },
+  searchFloat: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+    right: spacing.md,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.sm,
-  },
-  helper: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-  input: {
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: spacing.xs,
-    padding: spacing.sm,
-    fontSize: 16,
-  },
-  inputText: {
-    fontSize: 16,
-    color: colors.text,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  chevron: {
-    fontSize: 20,
-    color: colors.textMuted,
-  },
-  multiline: {
-    minHeight: 76,
-    textAlignVertical: 'top',
-  },
-  optionRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  option: {
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-  },
-  optionSelected: {
-    backgroundColor: colors.primary,
+  search: {
+    backgroundColor: colors.background,
     borderColor: colors.primary,
-  },
-  optionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    textTransform: 'capitalize',
-  },
-  optionTextSelected: {
-    color: '#fff',
-  },
-  error: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#B3261E',
-    marginTop: spacing.sm,
-  },
-  success: {
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1B8737',
-    marginTop: spacing.sm,
-  },
-  spacer: {
-    height: spacing.md,
+    color: colors.text,
   },
 });

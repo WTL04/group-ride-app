@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@gorhom/bottom-sheet": "^5.2.14",
     "@maplibre/maplibre-react-native": "^11.5.1",
     "@react-native-community/datetimepicker": "^9.2.2",
     "@react-native/new-app-screen": "0.88.0",
@@ -19,8 +20,11 @@
     "react": "19.3.0",
     "react-native": "0.88.0",
     "react-native-dotenv": "^5.0.0",
+    "react-native-gesture-handler": "^3.5.0",
+    "react-native-reanimated": "^4.7.1",
     "react-native-safe-area-context": "^5.10.1",
-    "react-native-screens": "^4.30.0"
+    "react-native-screens": "^4.30.0",
+    "react-native-worklets": "^0.13.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
